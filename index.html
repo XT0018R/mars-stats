@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>火星档案馆 · 数据看板</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg:#0A0405; --bg2:#140708; --red:#FF2D3A; --red-deep:#8C0A12;
+    --txt:#FFFFFF; --txt2:#E6D8D9; --txt3:#93797C; --txt4:#5E4A4C;
+    --line:rgba(255,255,255,.08);
+  }
+  body{
+    background:var(--bg); color:var(--txt); min-height:100vh;
+    font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;
+    padding:clamp(18px,4vw,48px) clamp(16px,4vw,48px) 64px;
+    background-image:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(140,10,18,.45) 0%,rgba(10,4,5,0) 65%);
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1060px;margin:0 auto}
+  header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:36px}
+  .kicker{font-size:11px;letter-spacing:.3em;color:var(--red);text-transform:uppercase;margin-bottom:10px}
+  h1{font-size:clamp(24px,4.2vw,38px);font-weight:600;letter-spacing:-.01em;line-height:1.15}
+  h1 em{font-style:italic;font-family:'Instrument Serif',Georgia,'Songti SC',serif;color:var(--red)}
+  .meta{margin-top:10px;font-size:12px;color:var(--txt3)}
+  .refresh{
+    background:rgba(255,45,58,.1);border:1px solid rgba(255,45,58,.3);color:var(--red);
+    padding:10px 18px;border-radius:999px;font-size:13px;cursor:pointer;font-family:inherit;
+    transition:.2s;white-space:nowrap;
+  }
+  .refresh:hover{background:rgba(255,45,58,.2)}
+  .refresh:disabled{opacity:.5;cursor:default}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:14px}
+  .card{
+    background:rgba(255,255,255,.022);border:1px solid var(--line);border-radius:14px;
+    padding:22px 20px;position:relative;overflow:hidden;
+  }
+  .card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--red);opacity:.85}
+  .card .lb{font-size:11.5px;color:var(--txt3);letter-spacing:.06em;margin-bottom:10px}
+  .card .vl{font-size:38px;font-weight:700;line-height:1;font-family:'Instrument Serif',Georgia,serif;letter-spacing:-.02em}
+  .card .vl small{font-size:14px;font-weight:400;color:var(--txt2);margin-left:4px;font-family:inherit}
+  .card .sub{margin-top:9px;font-size:11.5px;color:var(--txt4)}
+  section{margin-top:38px}
+  h2{font-size:15px;font-weight:600;margin-bottom:5px;display:flex;align-items:center;gap:9px}
+  h2::before{content:'';width:15px;height:2px;background:var(--red)}
+  .hint{font-size:11.5px;color:var(--txt4);margin-bottom:16px}
+  .panel{background:rgba(255,255,255,.022);border:1px solid var(--line);border-radius:14px;padding:24px}
+  /* 漏斗 */
+  .fr{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+  .fr:last-child{margin-bottom:0}
+  .fr .lb{width:96px;font-size:12.5px;color:var(--txt2);flex-shrink:0}
+  .fr .track{flex:1;height:34px;background:rgba(255,255,255,.04);border-radius:8px;overflow:hidden;min-width:60px}
+  .fr .fill{
+    height:100%;border-radius:8px;display:flex;align-items:center;padding-left:12px;
+    font-size:12.5px;font-weight:600;color:#fff;white-space:nowrap;min-width:44px;
+    transition:width .5s cubic-bezier(.16,1,.3,1);
+  }
+  .fr .num{width:64px;text-align:right;font-size:12.5px;color:var(--red);flex-shrink:0}
+  /* 柱状 */
+  .bars{display:flex;align-items:flex-end;gap:clamp(8px,2.4vw,22px);height:200px;padding-top:24px;overflow-x:auto}
+  .bw{flex:1;min-width:32px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+  .bar{
+    width:100%;max-width:44px;background:linear-gradient(180deg,var(--red),var(--red-deep));
+    border-radius:5px 5px 0 0;position:relative;transition:.4s;min-height:3px;
+  }
+  .bar:hover{filter:brightness(1.3)}
+  .bv{position:absolute;top:-19px;left:50%;transform:translateX(-50%);font-size:10.5px;color:var(--txt2)}
+  .bx{font-size:10.5px;color:var(--txt4);margin-top:7px;white-space:nowrap}
+  /* 排行 */
+  .row{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+  .row:last-child{margin-bottom:0}
+  .rn{width:70px;font-size:12.5px;color:var(--txt2);flex-shrink:0}
+  .rt{flex:1;height:7px;background:rgba(255,255,255,.05);border-radius:4px;overflow:hidden}
+  .rt i{display:block;height:100%;background:linear-gradient(90deg,var(--red-deep),var(--red));border-radius:4px}
+  .rv{width:32px;text-align:right;font-size:12.5px;color:var(--txt3);flex-shrink:0}
+  .empty{font-size:13px;color:var(--txt4);padding:6px 0}
+  footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);font-size:11.5px;color:var(--txt4);line-height:1.9}
+  .loading{text-align:center;padding:80px 0;color:var(--txt3);font-size:14px}
+  .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--red);margin-right:7px;animation:p 1.2s infinite}
+  @keyframes p{0%,100%{opacity:.3}50%{opacity:1}}
+  @media(max-width:560px){
+    .fr .lb{width:76px;font-size:11.5px}
+    .card .vl{font-size:32px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="kicker">Mars Archive · Dashboard</div>
+      <h1>数据<em>看板</em></h1>
+      <div class="meta" id="meta">正在读取…</div>
+    </div>
+    <button class="refresh" id="btn">↻ 刷新数据</button>
+  </header>
+  <div id="app"><div class="loading"><span class="dot"></span>正在从云端读取数据…</div></div>
+  <footer>
+    火星档案馆 · 数据看板 ｜ 打开页面即实时读取云端，无需手动更新<br>
+    口径：以设备随机标识去重统计"人"，不含姓名、手机号、IP 等任何个人身份信息。<span id="note"></span>
+  </footer>
+</div>
+
+<script>
+/* 配置：与主站同一后端（publishable key，设计为前端公开） */
+const SB = {
+  url: 'https://ywxvahajgncxacshjnmq.supabase.co',
+  key: 'sb_publishable_ke5rS4tx3TAu4yJzGDErvg'
+};
+
+async function q(path) {
+  const res = await fetch(SB.url + path, {
+    headers: { 'apikey': SB.key, 'Authorization': 'Bearer ' + SB.key }
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => (n || 0).toLocaleString('zh-CN');
+
+async function load() {
+  const app = document.getElementById('app');
+  const btn = document.getElementById('btn');
+  btn.disabled = true; btn.textContent = '读取中…';
+
+  try {
+    /* 并行拉取：埋点事件 / 打卡 / 照片与故事（照片只取元数据，绝不拉 base64 图） */
+    const [events, att, ph] = await Promise.all([
+      q('/rest/v1/events?select=kind,device_id,created_at,ref&limit=20000'),
+      q('/rest/v1/attendance?select=device_id,show_id,city,province,created_at&limit=10000'),
+      q('/rest/v1/photos?select=device_id,show_id,story,created_at&limit=10000')
+    ]);
+
+    /* ---------- 计算 ---------- */
+    const ev = events.filter(e => e.kind && e.kind !== 'ping' && e.device_id !== 'setup-check');
+    const kindCount = {};
+    ev.forEach(e => kindCount[e.kind] = (kindCount[e.kind] || 0) + 1);
+
+    const pv = kindCount['pv'] || 0;
+    const uv = new Set(ev.map(e => e.device_id).filter(Boolean)).size;
+
+    const devAtt = new Set(att.map(r => r.device_id).filter(Boolean));
+    const devPh  = new Set(ph.map(r => r.device_id).filter(Boolean));
+    const devAll = new Set([...devAtt, ...devPh]);
+    const stories = ph.filter(r => r.story && r.story.trim()).length;
+    const cities = new Set(att.map(r => r.city).filter(Boolean));
+    const provs  = new Set(att.map(r => r.province).filter(Boolean));
+    const shows  = new Set([...att.map(r => r.show_id), ...ph.map(r => r.show_id)].filter(Boolean));
+    const avg = devAll.size ? ((att.length + ph.length) / devAll.size) : 0;
+
+    /* 按天（PV + 打卡 + 上传） */
+    const dayMap = {};
+    const bump = (d, k) => { if (!d) return; const day = d.slice(0, 10); (dayMap[day] = dayMap[day] || {pv:0, use:0}); dayMap[day][k]++; };
+    ev.filter(e => e.kind === 'pv').forEach(e => bump(e.created_at, 'pv'));
+    att.forEach(r => bump(r.created_at, 'use'));
+    ph.forEach(r => bump(r.created_at, 'use'));
+    const days = Object.keys(dayMap).sort();
+
+    /* 来源 */
+    const refMap = {};
+    ev.filter(e => e.kind === 'pv' && e.ref).forEach(e => {
+      let h = e.ref.replace(/^www\./, '').split('/')[0];
+      refMap[h] = (refMap[h] || 0) + 1;
+    });
+    const refs = Object.entries(refMap).sort((a, b) => b[1] - a[1]).slice(0, 6);
+
+    /* 城市 Top */
+    const cityMap = {};
+    att.forEach(r => { if (r.city) cityMap[r.city] = (cityMap[r.city] || 0) + 1; });
+    const cityTop = Object.entries(cityMap).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+    /* ---------- 渲染 ---------- */
+    const maxDay = Math.max(1, ...days.map(d => dayMap[d].pv + dayMap[d].use));
+    const bars = days.slice(-21).map(d => {
+      const v = dayMap[d].pv + dayMap[d].use;
+      const h = Math.max(3, Math.round(v / maxDay * 150));
+      return `<div class="bw"><div class="bar" style="height:${h}px" title="${d}｜打开 ${dayMap[d].pv}｜使用 ${dayMap[d].use}">
+        <span class="bv">${v}</span></div><span class="bx">${d.slice(5)}</span></div>`;
+    }).join('') || '<div class="empty">还没有数据（数据从埋点上线那天开始累积）</div>';
+
+    /* 漏斗 */
+    const fMax = Math.max(pv, uv, att.length, ph.length, 1);
+    const funnel = [
+      ['打开页面', pv, '#FF2D3A'],
+      ['标记去过', att.length, '#E01B28'],
+      ['上传照片', ph.length, '#B31018'],
+      ['写故事', stories, '#8C0A12']
+    ].map(([lb, v, c]) => {
+      const w = Math.max(4, v / fMax * 100);
+      return `<div class="fr"><span class="lb">${lb}</span>
+        <span class="track"><i class="fill" style="width:${w}%;background:linear-gradient(90deg,#3D0508,${c})">${fmt(v)}</i></span>
+        <span class="num">${pv ? (v / pv * 100).toFixed(1) + '%' : '—'}</span></div>`;
+    }).join('');
+
+    const maxCity = cityTop.length ? cityTop[0][1] : 1;
+    const cityRows = cityTop.map(([n, c]) =>
+      `<div class="row"><span class="rn">${esc(n)}</span><span class="rt"><i style="width:${(c/maxCity*100).toFixed(0)}%"></i></span><span class="rv">${c}</span></div>`
+    ).join('') || '<div class="empty">暂无打卡数据</div>';
+
+    const refRows = refs.map(([n, c]) =>
+      `<div class="row"><span class="rn">${esc(n)}</span><span class="rt"><i style="width:${(c/refs[0][1]*100).toFixed(0)}%"></i></span><span class="rv">${c}</span></div>`
+    ).join('') || '<div class="empty">暂无来源数据（从站外点进来才会记录）</div>';
+
+    app.innerHTML = `
+      <div class="grid">
+        <div class="card"><div class="lb">打开次数 PV</div><div class="vl">${fmt(pv)}<small>次</small></div>
+          <div class="sub">每次打开页面计一次</div></div>
+        <div class="card"><div class="lb">独立访客 UV</div><div class="vl">${fmt(uv)}<small>人</small></div>
+          <div class="sub">按设备去重 · 埋点上线后累积</div></div>
+        <div class="card"><div class="lb">真实使用者</div><div class="vl">${fmt(devAll.size)}<small>人</small></div>
+          <div class="sub">标记过或上传过内容</div></div>
+        <div class="card"><div class="lb">打卡 + 内容</div><div class="vl">${fmt(att.length + ph.length)}<small>条</small></div>
+          <div class="sub">人均 ${avg.toFixed(1)} 条 / 人</div></div>
+      </div>
+      <div class="grid">
+        <div class="card"><div class="lb">照片 + 故事</div><div class="vl">${fmt(ph.length)}<small>条</small></div>
+          <div class="sub">其中纯文字故事 ${fmt(stories)} 条</div></div>
+        <div class="card"><div class="lb">被标记的场次</div><div class="vl">${fmt(shows.size)}<small>场</small></div>
+          <div class="sub">覆盖 ${cities.size} 城 · ${provs.size} 省</div></div>
+        <div class="card"><div class="lb">打卡动作</div><div class="vl">${fmt(kindCount['went'] || 0)}<small>次</small></div>
+          <div class="sub">点过"我去过"的次数</div></div>
+        <div class="card"><div class="lb">上传动作</div><div class="vl">${fmt((kindCount['upload'] || 0) + (kindCount['story'] || 0))}<small>次</small></div>
+          <div class="sub">上传 ${fmt(kindCount['upload'] || 0)} · 故事 ${fmt(kindCount['story'] || 0)}</div></div>
+      </div>
+
+      <section>
+        <h2>转化漏斗</h2>
+        <div class="hint">从"打开"到"留下内容"的逐级留存——右侧是相对打开次数的转化率</div>
+        <div class="panel">${funnel}</div>
+      </section>
+
+      <section>
+        <h2>活跃趋势</h2>
+        <div class="hint">每天"打开次数 + 使用动作"合计 · 最近 ${Math.min(days.length, 21)} 天</div>
+        <div class="panel"><div class="bars">${bars}</div></div>
+      </section>
+
+      <section>
+        <h2>从哪来</h2>
+        <div class="hint">外部来源域名（在小红书/微信里直接打开的同应用内跳转可能记不到）</div>
+        <div class="panel">${refRows}</div>
+      </section>
+
+      <section>
+        <h2>城市分布 · 打卡 Top 10</h2>
+        <div class="panel">${cityRows}</div>
+      </section>
+    `;
+
+    const now = new Date();
+    document.getElementById('meta').textContent =
+      `数据更新于 ${now.toLocaleString('zh-CN', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})} ｜ 打开即实时读取`;
+    document.getElementById('note').textContent = days.length ? `　覆盖 ${days.length} 个活跃日。` : '';
+  } catch (e) {
+    app.innerHTML = `<div class="panel"><div class="empty">读取失败：${esc(e.message)}<br><br>
+      常见原因：当前网络到云端（海外服务）不通——换个网络或稍后点右上角刷新重试。</div></div>`;
+    document.getElementById('meta').textContent = '读取失败';
+  } finally {
+    btn.disabled = false; btn.textContent = '↻ 刷新数据';
+  }
+}
+
+document.getElementById('btn').addEventListener('click', load);
+load();
+</script>
+</body>
+</html>
